@@ -1,33 +1,22 @@
-
-
-
 from data_loader import QRCodeDataset, CHARSET, MAX_TEXT_LEN
 from model import create_model, get_best_device, save_model
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-
-
+import os
+from model import QRCodeSimpleNet
 
 def train():
     """
     Trains the QR code image-to-text model using per-character CrossEntropyLoss.
     """
-    # Load the data
-    print("Loading data...")
-    train_dataset = QRCodeDataset(num_samples=20000, force_synthetic=True)
-    val_dataset = QRCodeDataset(num_samples=400, force_synthetic=True)
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
-    val_loader = DataLoader(val_dataset, batch_size=32, num_workers=0)
 
     # Create or load model
-    import os
     model_path = 'qrcode_recognizer.pt'
     device = get_best_device()
     if os.path.exists(model_path):
         print(f"Loading existing model from {model_path}...")
-        from model import QRCodeSimpleNet
         model = QRCodeSimpleNet()
         model.load_state_dict(torch.load(model_path, map_location=device))
         model.to(device)
@@ -42,10 +31,19 @@ def train():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+    # create validation data
+    val_dataset = QRCodeDataset(num_samples=400, force_synthetic=True)
+    val_loader = DataLoader(val_dataset, batch_size=32, num_workers=0)
+
     # Training loop
     print("Training model...")
-    epochs = 10
+    epochs = 256
     for epoch in range(epochs):
+        # create train data
+        print("Loading data...")
+        train_dataset = QRCodeDataset(num_samples=2000, force_synthetic=True)
+        train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
+
         model.train()
         running_loss = 0.0
         for batch in train_loader:

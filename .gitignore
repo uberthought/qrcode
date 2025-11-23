@@ -17,3 +17,4 @@ ENV/
 
 
 data/
+*.pt
