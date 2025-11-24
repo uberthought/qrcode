@@ -40,10 +40,13 @@ def train():
     epochs = 256
     for epoch in range(epochs):
         # create train data
-        print("Loading data...")
-        train_dataset = QRCodeDataset(num_samples=2000, force_synthetic=True)
-        train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
+        print(f"Epoch {epoch+1}/{epochs}", end='', flush=True)
 
+        print(" - Creating data..." , end='', flush=True)
+        train_dataset = QRCodeDataset(num_samples=2048, force_synthetic=True)
+        train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=0)
+
+        print(" - Training...", end='', flush=True)
         model.train()
         running_loss = 0.0
         for batch in train_loader:
@@ -59,20 +62,22 @@ def train():
             running_loss += loss.item() * imgs.size(0)
         epoch_loss = running_loss / len(train_loader.dataset)
 
+        print(f" - Loss: {epoch_loss:.4f}")
+
         # Validation
-        model.eval()
-        val_loss = 0.0
-        with torch.no_grad():
-            for batch in val_loader:
-                imgs, labels, _ = batch
-                imgs, labels = imgs.to(device), labels.to(device)
-                logits = model(imgs)
-                logits = logits.view(-1, logits.size(-1))
-                labels = labels.view(-1)
-                loss = criterion(logits, labels)
-                val_loss += loss.item() * imgs.size(0)
-        val_loss /= len(val_loader.dataset)
-        print(f"Epoch {epoch+1}/{epochs} - Loss: {epoch_loss:.4f} - Val Loss: {val_loss:.4f}")
+        # model.eval()
+        # val_loss = 0.0
+        # with torch.no_grad():
+        #     for batch in val_loader:
+        #         imgs, labels, _ = batch
+        #         imgs, labels = imgs.to(device), labels.to(device)
+        #         logits = model(imgs)
+        #         logits = logits.view(-1, logits.size(-1))
+        #         labels = labels.view(-1)
+        #         loss = criterion(logits, labels)
+        #         val_loss += loss.item() * imgs.size(0)
+        # val_loss /= len(val_loader.dataset)
+        # print(f"Epoch {epoch+1}/{epochs} - Loss: {epoch_loss:.4f} - Val Loss: {val_loss:.4f}")
 
     # Save the trained model
     print("Saving model...")
