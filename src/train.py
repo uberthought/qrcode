@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import os
-from model import QRCodeSimpleNet
+from model import QRCodeResNet
 
 def train():
     """
@@ -17,7 +17,7 @@ def train():
     device = get_best_device()
     if os.path.exists(model_path):
         print(f"Loading existing model from {model_path}...")
-        model = QRCodeSimpleNet()
+        model = QRCodeResNet()
         model.load_state_dict(torch.load(model_path, map_location=device))
         model.to(device)
         print(f"Loaded model from {model_path} on device: {device}")
@@ -63,21 +63,6 @@ def train():
         epoch_loss = running_loss / len(train_loader.dataset)
 
         print(f" - Loss: {epoch_loss:.4f}")
-
-        # Validation
-        # model.eval()
-        # val_loss = 0.0
-        # with torch.no_grad():
-        #     for batch in val_loader:
-        #         imgs, labels, _ = batch
-        #         imgs, labels = imgs.to(device), labels.to(device)
-        #         logits = model(imgs)
-        #         logits = logits.view(-1, logits.size(-1))
-        #         labels = labels.view(-1)
-        #         loss = criterion(logits, labels)
-        #         val_loss += loss.item() * imgs.size(0)
-        # val_loss /= len(val_loader.dataset)
-        # print(f"Epoch {epoch+1}/{epochs} - Loss: {epoch_loss:.4f} - Val Loss: {val_loss:.4f}")
 
     # Save the trained model
     print("Saving model...")

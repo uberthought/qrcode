@@ -10,7 +10,7 @@ def save_model(model, path):
 
 def load_model(path, device=None):
     """Load model state dict from file and return model on device (if given)."""
-    model = QRCodeSimpleNet()  # Use the correct model class
+    model = QRCodeResNet()  # Use the new ResNet-like model class
     if device is None:
         device = get_best_device()
     print(f"Loading model on device: {device}")
@@ -33,37 +33,77 @@ CHARSET_SIZE = len(CHARSET)
 SEQ_LEN = MAX_TEXT_LEN  # Fixed output length matches label length
 
 
-# Simple CNN for fixed-length sequence classification (no CTC)
-class QRCodeSimpleNet(nn.Module):
+
+# Basic Residual Block for ResNet-like architecture
+class BasicBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, stride=1, downsample=None):
+        super().__init__()
+        self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(out_channels)
+        self.downsample = downsample
+
+    def forward(self, x):
+        identity = x
+        out = self.conv1(x)
+        out = self.bn1(out)
+        out = self.relu(out)
+        out = self.conv2(out)
+        out = self.bn2(out)
+        if self.downsample is not None:
+            identity = self.downsample(x)
+        out += identity
+        out = self.relu(out)
+        return out
+
+# ResNet-like network for QR code recognition
+class QRCodeResNet(nn.Module):
     def __init__(self, charset_size=CHARSET_SIZE, seq_len=SEQ_LEN):
         super().__init__()
         self.seq_len = seq_len
-        self.features = nn.Sequential(
-            nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(2),
-            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool2d((1, 1)),
-        )
+        self.in_channels = 32
+        self.conv1 = nn.Conv2d(1, 32, kernel_size=7, stride=2, padding=3, bias=False)
+        self.bn1 = nn.BatchNorm2d(32)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        self.layer1 = self._make_layer(32, 32, blocks=4, stride=1)
+        self.layer2 = self._make_layer(32, 64, blocks=4, stride=2)
+        self.layer3 = self._make_layer(64, 128, blocks=4, stride=2)
+        self.layer4 = self._make_layer(128, 256, blocks=4, stride=2)
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         self.classifier = nn.Linear(256, seq_len * charset_size)
+
+    def _make_layer(self, in_channels, out_channels, blocks, stride):
+        downsample = None
+        if stride != 1 or in_channels != out_channels:
+            downsample = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_channels),
+            )
+        layers = [BasicBlock(in_channels, out_channels, stride, downsample)]
+        for _ in range(1, blocks):
+            layers.append(BasicBlock(out_channels, out_channels))
+        return nn.Sequential(*layers)
 
     def forward(self, x):
         # x: (B, 1, 128, 128)
-        x = self.features(x)
-        x = x.view(x.size(0), -1)  # (B, 256)
-        x = self.classifier(x)     # (B, seq_len * charset_size)
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
         x = x.view(x.size(0), self.seq_len, -1)  # (B, seq_len, charset_size)
-        # During inference, you can get predicted indices with x.argmax(-1)
         return x
 
 def create_model():
-    """Create a QRCodeSimpleNet model and move it to the best device."""
-    model = QRCodeSimpleNet()
+    """Create a QRCodeResNet model and move it to the best device."""
+    model = QRCodeResNet()
     return model
