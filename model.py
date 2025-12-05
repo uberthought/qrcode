@@ -67,18 +67,10 @@ class QRCodeResNet(nn.Module):
         self.conv1 = nn.Conv2d(1, 32, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(32)
         self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(32, 32, blocks=4, stride=1)
         self.layer2 = self._make_layer(32, 64, blocks=4, stride=2)
         self.layer3 = self._make_layer(64, 128, blocks=4, stride=2)
         self.layer4 = self._make_layer(128, 256, blocks=4, stride=2)
-        self.logic = nn.Sequential(
-            nn.Linear(256 * 4 * 4, 2048),
-            nn.LeakyReLU(inplace=True),
-            nn.Linear(2048, 2048),
-            nn.LeakyReLU(inplace=True),
-            nn.Linear(2048, 256)
-        )
         self.classifier = nn.Linear(256, seq_len * charset_size)
 
     def _make_layer(self, in_channels, out_channels, blocks, stride):
@@ -98,13 +90,11 @@ class QRCodeResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.maxpool(x)
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
         x = torch.flatten(x, 1)
-        x = self.logic(x)
         x = self.classifier(x)
         x = x.view(x.size(0), self.seq_len, -1)  # (B, seq_len, charset_size)
         return x
