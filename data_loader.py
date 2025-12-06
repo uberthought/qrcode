@@ -46,20 +46,15 @@ class QRCodeDataset(Dataset):
     """
     def __init__(self, data_dir=None, num_samples=1000, transform=None, force_synthetic=False):
         self.data_dir = data_dir
+        self.num_samples = num_samples
+        self.force_synthetic = force_synthetic
         self.transform = transform if transform is not None else transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.5,), (0.5,))
         ])
         self.samples = []
 
-        if data_dir is None or force_synthetic:
-            # Generate synthetic QR codes
-            for _ in range(num_samples):
-                text_len = np.random.randint(4, MAX_TEXT_LEN+1)
-                text = ''.join(np.random.choice(list(CHARSET), text_len))
-                img_np = generate_qrcode_image(text)
-                self.samples.append((img_np, text))
-        else:
+        if not (data_dir is None or force_synthetic):
             # Load images and labels from a CSV file in data_dir
             import csv
             csv_path = os.path.join(data_dir, 'labels.csv')
@@ -82,10 +77,18 @@ class QRCodeDataset(Dataset):
                     self.samples.append((img_np, text))
 
     def __len__(self):
+        if self.data_dir is None or self.force_synthetic:
+            return self.num_samples
         return len(self.samples)
 
     def __getitem__(self, idx):
-        img_np, text = self.samples[idx]
+        if self.data_dir is None or self.force_synthetic:
+            text_len = np.random.randint(4, MAX_TEXT_LEN+1)
+            text = ''.join(np.random.choice(list(CHARSET), text_len))
+            img_np = generate_qrcode_image(text)
+        else:
+            img_np, text = self.samples[idx]
+
         img = self.transform(img_np)
         label = text_to_indices(text)
         return img, label, text

@@ -11,7 +11,7 @@ def predict_image(image_path, model_path='qrcode_recognizer.pt'):
     Predicts the text content of a QR code image using the trained model.
     """
     # Load the model
-    from model import load_model
+    from model_vit import load_model
     model = load_model(model_path)
 
     # Load and preprocess the image

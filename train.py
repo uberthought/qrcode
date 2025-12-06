@@ -1,11 +1,10 @@
 from data_loader import QRCodeDataset, CHARSET, MAX_TEXT_LEN
-from model import create_model, get_best_device, save_model
+from model import get_best_device, save_model, load_model, QRCodeResNet
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import os
-from model import QRCodeResNet
 
 def train():
     """
@@ -16,37 +15,29 @@ def train():
     model_path = 'qrcode_recognizer.pt'
     device = get_best_device()
     if os.path.exists(model_path):
-        print(f"Loading existing model from {model_path}...")
-        model = QRCodeResNet()
-        model.load_state_dict(torch.load(model_path, map_location=device))
-        model.to(device)
-        print(f"Loaded model from {model_path} on device: {device}")
+        model = load_model(model_path)
     else:
-        print("Creating new model...")
-        model = create_model()
-        model.to(device)
-        print(f"Created new model on device: {device}")
-
-    # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-    # create validation data
-    val_dataset = QRCodeDataset(num_samples=400, force_synthetic=True)
-    val_loader = DataLoader(val_dataset, batch_size=32, num_workers=0)
+        model = QRCodeResNet()
 
     # Training loop
     print("Training model...")
     epochs = 256
+
+    # Loss and optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    scheduler = optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.01, steps_per_epoch=64, epochs=epochs)
+
+    # Create training data loader once
+    train_dataset = QRCodeDataset(num_samples=1024, force_synthetic=True)
+    # pin_memory is not supported on MPS
+    use_pin_memory = device.type != 'mps'
+    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=False, num_workers=4, pin_memory=use_pin_memory, persistent_workers=True)
+
     for epoch in range(epochs):
-        # create train data
         print(f"Epoch {epoch+1}/{epochs}", end='', flush=True)
-
-        print(" - Creating data..." , end='', flush=True)
-        train_dataset = QRCodeDataset(num_samples=2048, force_synthetic=True)
-        train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=0)
-
         print(" - Training...", end='', flush=True)
+        
         model.train()
         running_loss = 0.0
         for batch in train_loader:
@@ -59,6 +50,7 @@ def train():
             loss = criterion(logits, labels)
             loss.backward()
             optimizer.step()
+            scheduler.step()
             running_loss += loss.item() * imgs.size(0)
         epoch_loss = running_loss / len(train_loader.dataset)
 

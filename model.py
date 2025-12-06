@@ -8,11 +8,10 @@ def save_model(model, path):
     """Save model state dict to file."""
     torch.save(model.state_dict(), path)
 
-def load_model(path, device=None):
-    """Load model state dict from file and return model on device (if given)."""
+def load_model(path):
+    """Load model state dict from file and return model on best device."""
     model = QRCodeResNet()  # Use the new ResNet-like model class
-    if device is None:
-        device = get_best_device()
+    device = get_best_device()
     print(f"Loading model on device: {device}")
     model.load_state_dict(torch.load(path, map_location=device))
     model.to(device)
@@ -31,8 +30,6 @@ def get_best_device():
 
 CHARSET_SIZE = len(CHARSET)
 SEQ_LEN = MAX_TEXT_LEN  # Fixed output length matches label length
-
-
 
 # Basic Residual Block for ResNet-like architecture
 class BasicBlock(nn.Module):
@@ -72,6 +69,7 @@ class QRCodeResNet(nn.Module):
         self.layer3 = self._make_layer(64, 128, blocks=1, stride=2)
         self.layer4 = self._make_layer(128, 256, blocks=1, stride=2)
         self.classifier = nn.Linear(256 * 8 * 8, seq_len * charset_size)
+        self.to(get_best_device())
 
     def _make_layer(self, in_channels, out_channels, blocks, stride):
         downsample = None
@@ -100,7 +98,4 @@ class QRCodeResNet(nn.Module):
        # x: (, seq_len, charset_size)
         return x
 
-def create_model():
-    """Create a QRCodeResNet model and move it to the best device."""
-    model = QRCodeResNet()
-    return model
+

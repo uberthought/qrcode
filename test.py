@@ -3,13 +3,12 @@ import torch
 from data_loader import generate_qrcode_image, decode_prediction, CHARSET, MAX_TEXT_LEN
 import numpy as np
 from torchvision import transforms
+from model import load_model
 
 
 def main():
     # Load model
-    from model import load_model, get_best_device
-    device = get_best_device()
-    model = load_model('qrcode_recognizer.pt', device=device)
+    model = load_model('qrcode_recognizer.pt')
 
     # Test data
 
@@ -127,6 +126,8 @@ def main():
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])
+
+    device = model.conv1.weight.device
 
     for s in test_strings:
         img_np = generate_qrcode_image(s)
