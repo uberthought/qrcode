@@ -1,6 +1,5 @@
 from data_loader import QRCodeDataset, CHARSET, MAX_TEXT_LEN
-from model import get_best_device, save_model, load_model, QRCodeResNet
-import torch
+from model import create_model, get_best_device, save_model, load_model
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
@@ -17,11 +16,11 @@ def train():
     if os.path.exists(model_path):
         model = load_model(model_path)
     else:
-        model = QRCodeResNet()
+        model = create_model()
 
     # Training loop
     print("Training model...")
-    epochs = 256
+    epochs = 187
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -29,10 +28,10 @@ def train():
     scheduler = optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.01, steps_per_epoch=64, epochs=epochs)
 
     # Create training data loader once
-    train_dataset = QRCodeDataset(num_samples=1024, force_synthetic=True)
+    train_dataset = QRCodeDataset(num_samples=512, force_synthetic=True)
     # pin_memory is not supported on MPS
     use_pin_memory = device.type != 'mps'
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=False, num_workers=4, pin_memory=use_pin_memory, persistent_workers=True)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=use_pin_memory, persistent_workers=True)
 
     for epoch in range(epochs):
         print(f"Epoch {epoch+1}/{epochs}", end='', flush=True)
