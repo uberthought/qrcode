@@ -20,7 +20,7 @@ def train():
 
     # Training loop
     print("Training model...")
-    epochs = 187
+    epochs = 16
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
