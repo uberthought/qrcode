@@ -20,18 +20,18 @@ def train():
 
     # Training loop
     print("Training model...")
-    epochs = 16
+    epochs = 32
+
+    # Create training data loader once
+    train_dataset = QRCodeDataset(num_samples=4098, force_synthetic=True)
+    # pin_memory is not supported on MPS
+    use_pin_memory = device.type != 'mps'
+    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=False, num_workers=4, pin_memory=use_pin_memory, persistent_workers=True)
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    scheduler = optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.01, steps_per_epoch=64, epochs=epochs)
-
-    # Create training data loader once
-    train_dataset = QRCodeDataset(num_samples=512, force_synthetic=True)
-    # pin_memory is not supported on MPS
-    use_pin_memory = device.type != 'mps'
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, num_workers=4, pin_memory=use_pin_memory, persistent_workers=True)
+    scheduler = optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.01, steps_per_epoch=len(train_loader), epochs=epochs)
 
     for epoch in range(epochs):
         print(f"Epoch {epoch+1}/{epochs}", end='', flush=True)

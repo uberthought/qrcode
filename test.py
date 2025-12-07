@@ -130,6 +130,7 @@ def main():
     device = model.conv1.weight.device
 
     for s in test_strings:
+        s = s[:MAX_TEXT_LEN]
         img_np = generate_qrcode_image(s)
         img = transform(img_np).unsqueeze(0)  # (1, 1, 128, 128)
         img = img.to(device)

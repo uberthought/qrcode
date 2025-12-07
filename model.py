@@ -40,7 +40,7 @@ class BasicBlock(nn.Module):
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(out_channels)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.LeakyReLU(inplace=True)
         self.conv2 = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(out_channels)
         self.downsample = downsample
@@ -66,11 +66,11 @@ class QRCodeResNet(nn.Module):
         self.in_channels = 32
         self.conv1 = nn.Conv2d(1, 32, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = nn.BatchNorm2d(32)
-        self.relu = nn.ReLU(inplace=True)
-        self.layer1 = self._make_layer(32, 32, blocks=2, stride=1)
-        self.layer2 = self._make_layer(32, 64, blocks=4, stride=2)
-        self.layer3 = self._make_layer(64, 128, blocks=8, stride=2)
-        self.layer4 = self._make_layer(128, 256, blocks=16, stride=2)
+        self.relu = nn.LeakyReLU(inplace=True)
+        self.layer1 = self._make_layer(32, 32, blocks=3, stride=1)
+        self.layer2 = self._make_layer(32, 64, blocks=3, stride=2)
+        self.layer3 = self._make_layer(64, 128, blocks=3, stride=2)
+        self.layer4 = self._make_layer(128, 256, blocks=3, stride=2)
         self.classifier = nn.Linear(256 * 8 * 8, seq_len * charset_size)
         self.to(get_best_device())
 
