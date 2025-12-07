@@ -5,7 +5,10 @@ from data_loader import CHARSET, MAX_TEXT_LEN
 
 def create_model():
     """Create and return a new QRCodeResNet model instance."""
-    return QRCodeResNet()
+    model = QRCodeResNet()
+    device = get_best_device()
+    model.to(device)
+    return model
 
 def save_model(model, path):
     """Save model state dict to file."""
@@ -91,14 +94,12 @@ class QRCodeResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.layer1(x) # (, 32, 64, 64)
-        x = self.layer2(x) # (, 64, 32, 32)
-        x = self.layer3(x) # (, 128, 16, 16)
-        x = self.layer4(x) # (, 256, 8, 8)
-        x = torch.flatten(x, 1) # (, 16384)
-        x = self.classifier(x) # (, 2240)
-        x = x.view(x.size(0), self.seq_len, -1) # (, 32, 70)
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.layer4(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        x = x.view(x.size(0), self.seq_len, -1)
        # x: (, seq_len, charset_size)
         return x
-
-
